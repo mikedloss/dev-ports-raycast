@@ -15,7 +15,7 @@ import {
   Keyboard,
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatBytes, formatPercent, truncateCommand } from "./lib/format";
 import { getProcessCwds, getProcessStats, killProcess } from "./lib/processes";
@@ -30,6 +30,7 @@ export default function Command() {
   const preferences = getPreferenceValues<CommandPreferences>();
   const [showAllPorts, setShowAllPorts] = useState(Boolean(preferences.showAllPortsByDefault));
   const [showDetails, setShowDetails] = useState(true);
+  const lastErrorMessageRef = useRef<string>();
   const { data: ports = [], error, isLoading, revalidate } = usePromise(discoverPorts, [preferences.defaultHost]);
 
   const visiblePorts = useMemo(
@@ -51,8 +52,15 @@ export default function Command() {
 
   useEffect(() => {
     if (!error) {
+      lastErrorMessageRef.current = undefined;
       return;
     }
+
+    if (lastErrorMessageRef.current === error.message) {
+      return;
+    }
+
+    lastErrorMessageRef.current = error.message;
 
     showToast({
       style: Toast.Style.Failure,
@@ -460,14 +468,24 @@ async function assertProcessStillMatches(port: PortProcess): Promise<void> {
     throw new Error("Process is no longer running.");
   }
 
-  if (port.command && stats.command !== port.command) {
+  if (!port.command || !stats.command) {
+    throw new Error("Process identity could not be verified. Refresh and try again.");
+  }
+
+  if (stats.command !== port.command) {
     throw new Error("Process changed since the list was refreshed. Refresh and try again.");
   }
 
   const cwd = cwdByPid.get(port.pid);
 
-  if (port.cwd && cwd && cwd !== port.cwd) {
-    throw new Error("Process changed directory since the list was refreshed. Refresh and try again.");
+  if (port.cwd) {
+    if (!cwd) {
+      throw new Error("Process directory could not be verified. Refresh and try again.");
+    }
+
+    if (cwd !== port.cwd) {
+      throw new Error("Process changed directory since the list was refreshed. Refresh and try again.");
+    }
   }
 }
 
