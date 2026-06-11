@@ -30,7 +30,7 @@ export default function Command() {
   const preferences = getPreferenceValues<CommandPreferences>();
   const [showAllPorts, setShowAllPorts] = useState(Boolean(preferences.showAllPortsByDefault));
   const [showDetails, setShowDetails] = useState(true);
-  const lastErrorMessageRef = useRef<string>();
+  const lastErrorMessageRef = useRef<string | undefined>(undefined);
   const { data: ports = [], error, isLoading, revalidate } = usePromise(discoverPorts, [preferences.defaultHost]);
 
   const visiblePorts = useMemo(
