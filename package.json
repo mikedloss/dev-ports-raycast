@@ -1,0 +1,175 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "dev-ports",
+  "title": "Dev Ports",
+  "description": "Identify your local development servers without digging through terminal tabs and process lists.",
+  "icon": "extension-icon.png",
+  "author": "mike_dloss",
+  "platforms": [
+    "macOS"
+  ],
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "open-dev-ports",
+      "title": "Open Dev Ports",
+      "description": "List, open, copy, and kill local development ports.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "showAllPortsByDefault",
+      "title": "Show All Ports by Default",
+      "label": "Show all ports by default",
+      "description": "Include every listening TCP port instead of only likely development servers.",
+      "type": "checkbox",
+      "default": false,
+      "required": false
+    },
+    {
+      "name": "defaultHost",
+      "title": "Default URL Host",
+      "description": "Choose the host used when opening or copying a local server URL.",
+      "type": "dropdown",
+      "data": [
+        {
+          "title": "localhost",
+          "value": "localhost"
+        },
+        {
+          "title": "127.0.0.1",
+          "value": "127.0.0.1"
+        },
+        {
+          "title": "Bound address",
+          "value": "bound-address"
+        }
+      ],
+      "default": "localhost",
+      "required": true
+    },
+    {
+      "name": "confirmBeforeKill",
+      "title": "Confirm Before Kill",
+      "label": "Confirm before kill",
+      "description": "Ask for confirmation before sending SIGTERM to a process.",
+      "type": "checkbox",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "preferredTerminal",
+      "title": "Preferred Terminal",
+      "description": "Choose which terminal app to focus when using the terminal action.",
+      "type": "dropdown",
+      "data": [
+        {
+          "title": "Auto",
+          "value": "auto"
+        },
+        {
+          "title": "iTerm2",
+          "value": "iterm"
+        },
+        {
+          "title": "Apple Terminal",
+          "value": "terminal"
+        }
+      ],
+      "default": "auto",
+      "required": true
+    },
+    {
+      "name": "preferredIDE",
+      "title": "Preferred IDE",
+      "description": "Choose the editor or IDE used by the primary project-open action.",
+      "type": "dropdown",
+      "data": [
+        {
+          "title": "Auto-detect",
+          "value": "auto"
+        },
+        {
+          "title": "Cursor",
+          "value": "cursor"
+        },
+        {
+          "title": "Visual Studio Code",
+          "value": "visual-studio-code"
+        },
+        {
+          "title": "Zed",
+          "value": "zed"
+        },
+        {
+          "title": "WebStorm",
+          "value": "webstorm"
+        },
+        {
+          "title": "IntelliJ IDEA",
+          "value": "intellij-idea"
+        },
+        {
+          "title": "PyCharm",
+          "value": "pycharm"
+        },
+        {
+          "title": "Sublime Text",
+          "value": "sublime-text"
+        },
+        {
+          "title": "Xcode",
+          "value": "xcode"
+        },
+        {
+          "title": "System Default",
+          "value": "system"
+        }
+      ],
+      "default": "auto",
+      "required": true
+    },
+    {
+      "name": "confirmBeforeForceKill",
+      "title": "Confirm Before Force Kill",
+      "label": "Confirm before force kill",
+      "description": "Ask for confirmation before sending SIGKILL to a process.",
+      "type": "checkbox",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "closeAfterOpening",
+      "title": "Close Raycast After Opening URL",
+      "label": "Close Raycast after opening URL",
+      "description": "Close the Raycast window after opening a local server in the browser.",
+      "type": "checkbox",
+      "default": false,
+      "required": false
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.104.20",
+    "@raycast/utils": "^2.2.7"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.0.4",
+    "@types/node": "22.19.17",
+    "@types/react": "19.0.10",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
