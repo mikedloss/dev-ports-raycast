@@ -16,7 +16,6 @@ import {
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
-import path from "node:path";
 
 import { formatBytes, formatPercent, truncateCommand } from "./lib/format";
 import { getProcessCwds, getProcessStats, killProcess } from "./lib/processes";
@@ -38,6 +37,9 @@ export default function Command() {
     [ports, showAllPorts],
   );
   const devPorts = useMemo(() => ports.filter((port) => port.isDevServer), [ports]);
+  const navigationTitle = showAllPorts
+    ? `Open Dev Ports (${ports.length} ${ports.length === 1 ? "Port" : "Ports"})`
+    : `Open Dev Ports (${devPorts.length} ${devPorts.length === 1 ? "Dev Port" : "Dev Ports"})`;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -63,6 +65,7 @@ export default function Command() {
     <List
       isLoading={isLoading}
       isShowingDetail={showDetails}
+      navigationTitle={navigationTitle}
       searchBarPlaceholder="Search by port, process, command, PID, or directory"
     >
       <List.EmptyView
@@ -124,9 +127,8 @@ function PortListItem({
 
   return (
     <List.Item
-      icon={port.isDevServer ? Icon.Terminal : Icon.Network}
+      icon={port.isDevServer ? Icon.Terminal : Icon.Circle}
       title={`${port.displayName} :${port.port}`}
-      subtitle={getPortSubtitle(port)}
       keywords={[
         String(port.port),
         String(port.pid),
@@ -320,32 +322,6 @@ function PortDetail({ port }: { port: PortProcess }) {
       }
     />
   );
-}
-
-function getPortSubtitle(port: PortProcess): string {
-  const directory = formatDirectory(port.cwd);
-
-  if (directory) {
-    return `${port.processName} · ${directory}`;
-  }
-
-  return port.processName;
-}
-
-function formatDirectory(directory?: string): string | undefined {
-  if (!directory) {
-    return undefined;
-  }
-
-  const home = process.env.HOME;
-  const normalized = home && directory.startsWith(home) ? `~${directory.slice(home.length)}` : directory;
-  const parts = normalized.split(path.sep).filter(Boolean);
-
-  if (parts.length <= 3) {
-    return normalized;
-  }
-
-  return `${parts[0]}/${parts[1]}/.../${parts[parts.length - 1]}`;
 }
 
 async function openPortUrl(port: PortProcess, preferences: CommandPreferences) {
