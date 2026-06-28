@@ -114,7 +114,7 @@ function PortListItem({
 }) {
   const accessories = isLocalOnlyAddress(port.boundAddress)
     ? []
-    : [{ tag: { value: "LAN", color: Color.SecondaryText } }];
+    : [{ icon: Icon.Network, tooltip: "Available on LAN" }];
 
   return (
     <List.Item
