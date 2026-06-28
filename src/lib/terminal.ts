@@ -147,7 +147,7 @@ export async function focusTerminalSession(
   port: PortProcess,
   preferredTerminal: PreferredTerminalPreference,
 ): Promise<string> {
-  const terminals = preferredTerminal === "auto" ? (["iterm", "terminal"] as const) : ([preferredTerminal] as const);
+  const terminals = getTerminalSearchOrder(preferredTerminal);
   const errors: string[] = [];
 
   for (const terminal of terminals) {
@@ -160,6 +160,14 @@ export async function focusTerminalSession(
   }
 
   throw new Error(errors.find((error) => !error.includes("not running")) ?? errors[0] ?? "No matching terminal found.");
+}
+
+function getTerminalSearchOrder(preferredTerminal: PreferredTerminalPreference): TerminalApp[] {
+  if (preferredTerminal === "terminal") {
+    return ["terminal", "iterm"];
+  }
+
+  return ["iterm", "terminal"];
 }
 
 async function focusTerminalAppSession(port: PortProcess, terminal: TerminalApp): Promise<void> {
