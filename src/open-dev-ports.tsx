@@ -284,7 +284,7 @@ function PortDetail({ port }: { port: PortProcess }) {
           <List.Item.Detail.Metadata.Label title="Port" text={String(port.port)} />
           <List.Item.Detail.Metadata.Label title="PID" text={String(port.pid)} />
           <List.Item.Detail.Metadata.Label title="Process" text={port.processName} />
-          <List.Item.Detail.Metadata.Label title="Bound Address" text={port.boundAddress} />
+          <List.Item.Detail.Metadata.Label title="Bound Address" text={port.boundAddresses.join(", ")} />
           <List.Item.Detail.Metadata.Label title="URL" text={port.url} />
           {port.lanUrls.map((url, index) => (
             <List.Item.Detail.Metadata.Label key={url} title={index === 0 ? "LAN URL" : "LAN URL "} text={url} />

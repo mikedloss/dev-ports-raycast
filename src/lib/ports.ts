@@ -62,7 +62,7 @@ type LsofEntry = {
 };
 
 export async function discoverPorts(defaultHost: DefaultHostPreference): Promise<PortProcess[]> {
-  const entries = await getListeningPorts();
+  const entries = groupEquivalentEntries(await getListeningPorts());
   const pids = entries.map((entry) => entry.pid);
   const lanHosts = getLanHosts();
   const [statsByPid, cwdByPid, ancestorsByPid] = await Promise.all([
@@ -88,6 +88,7 @@ export async function discoverPorts(defaultHost: DefaultHostPreference): Promise
         port: entry.port,
         protocol: "tcp" as const,
         boundAddress: entry.boundAddress,
+        boundAddresses: entry.boundAddresses,
         url,
         lanUrls,
         processName: entry.processName,
@@ -108,6 +109,69 @@ export async function discoverPorts(defaultHost: DefaultHostPreference): Promise
   );
 
   return ports.sort(comparePorts);
+}
+
+function groupEquivalentEntries(entries: LsofEntry[]): Array<LsofEntry & { boundAddresses: string[] }> {
+  const grouped = new Map<string, LsofEntry & { boundAddresses: string[] }>();
+
+  for (const entry of entries) {
+    const scope = getAddressScope(entry.boundAddress);
+    const key = `${entry.pid}:${entry.port}:${scope}`;
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.boundAddresses = uniqueDefined([...existing.boundAddresses, entry.boundAddress]).sort(compareAddresses);
+      existing.boundAddress = choosePrimaryAddress(existing.boundAddresses);
+      continue;
+    }
+
+    grouped.set(key, {
+      ...entry,
+      boundAddresses: [entry.boundAddress],
+    });
+  }
+
+  return Array.from(grouped.values());
+}
+
+function getAddressScope(boundAddress: string): string {
+  if (isLocalOnlyAddress(boundAddress)) {
+    return "local";
+  }
+
+  if (isWildcardAddress(boundAddress)) {
+    return "lan";
+  }
+
+  return boundAddress;
+}
+
+function choosePrimaryAddress(boundAddresses: string[]): string {
+  return [...boundAddresses].sort(compareAddresses)[0] ?? "*";
+}
+
+function compareAddresses(a: string, b: string): number {
+  return getAddressRank(a) - getAddressRank(b) || a.localeCompare(b);
+}
+
+function getAddressRank(boundAddress: string): number {
+  if (boundAddress === "127.0.0.1") {
+    return 0;
+  }
+
+  if (boundAddress === "::1" || boundAddress === "[::1]") {
+    return 1;
+  }
+
+  if (boundAddress === "localhost") {
+    return 2;
+  }
+
+  if (isWildcardAddress(boundAddress)) {
+    return 3;
+  }
+
+  return 4;
 }
 
 function uniqueDefined(values: Array<string | undefined>): string[] {
@@ -264,6 +328,10 @@ function getLanHosts(): string[] {
 
 function isLocalOnlyAddress(boundAddress: string): boolean {
   return ["127.0.0.1", "::1", "[::1]", "localhost"].includes(boundAddress);
+}
+
+function isWildcardAddress(boundAddress: string): boolean {
+  return ["*", "0.0.0.0", "::", "[::]"].includes(boundAddress);
 }
 
 function getUrlHost(boundAddress: string, defaultHost: DefaultHostPreference): string {

@@ -39,6 +39,7 @@ export type PortProcess = {
   port: number;
   protocol: "tcp";
   boundAddress: string;
+  boundAddresses: string[];
   url: string;
   lanUrls: string[];
   processName: string;
