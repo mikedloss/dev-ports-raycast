@@ -308,8 +308,12 @@ async function buildLanUrls(boundAddress: string, port: number, lanHosts: string
     return [];
   }
 
-  const scheme = await detectUrlScheme("localhost", port);
-  return lanHosts.map((host) => `${scheme}://${host}:${port}`);
+  return Promise.all(
+    lanHosts.map(async (host) => {
+      const scheme = await detectUrlScheme(host, port);
+      return `${scheme}://${host}:${port}`;
+    }),
+  );
 }
 
 function getLanHosts(): string[] {

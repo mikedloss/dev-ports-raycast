@@ -1,26 +1,6 @@
-export type DefaultHostPreference = "localhost" | "127.0.0.1" | "bound-address";
-export type PreferredTerminalPreference = "auto" | "iterm" | "terminal";
-export type PreferredIDEPreference =
-  | "auto"
-  | "cursor"
-  | "visual-studio-code"
-  | "zed"
-  | "webstorm"
-  | "intellij-idea"
-  | "pycharm"
-  | "sublime-text"
-  | "xcode"
-  | "system";
-
-export type Preferences = {
-  showAllPortsByDefault?: boolean;
-  defaultHost: DefaultHostPreference;
-  preferredTerminal: PreferredTerminalPreference;
-  preferredIDE: PreferredIDEPreference;
-  confirmBeforeKill?: boolean;
-  confirmBeforeForceKill?: boolean;
-  closeAfterOpening?: boolean;
-};
+export type DefaultHostPreference = Preferences.OpenDevPorts["defaultHost"];
+export type PreferredTerminalPreference = Preferences.OpenDevPorts["preferredTerminal"];
+export type PreferredIDEPreference = Preferences.OpenDevPorts["preferredIDE"];
 
 export type ProcessStats = {
   pid: number;

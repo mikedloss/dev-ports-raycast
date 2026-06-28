@@ -1,3 +1,4 @@
+import net from "node:net";
 import tls from "node:tls";
 
 const PROBE_TTL_MS = 15_000;
@@ -47,10 +48,11 @@ export async function detectUrlScheme(host: string, port: number): Promise<"http
 
 function probeHttps(host: string, port: number): Promise<boolean> {
   return new Promise((resolve) => {
+    const servername = getServername(host);
     const socket = tls.connect({
       host,
       port,
-      servername: host === "127.0.0.1" ? "localhost" : host,
+      ...(servername ? { servername } : {}),
       rejectUnauthorized: false,
       timeout: HTTPS_PROBE_TIMEOUT_MS,
     });
@@ -70,6 +72,14 @@ function probeHttps(host: string, port: number): Promise<boolean> {
       resolve(false);
     });
   });
+}
+
+function getServername(host: string): string | undefined {
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
+    return "localhost";
+  }
+
+  return net.isIP(host) ? undefined : host;
 }
 
 function normalizeProbeHost(host: string): string {

@@ -19,14 +19,16 @@ import { useEffect, useMemo, useState } from "react";
 import path from "node:path";
 
 import { formatBytes, formatPercent, truncateCommand } from "./lib/format";
-import { killProcess } from "./lib/processes";
+import { getProcessCwds, getProcessStats, killProcess } from "./lib/processes";
 import { discoverPorts } from "./lib/ports";
 import { getPreferredIDE, IDE_CONFIGS } from "./lib/project";
 import { focusTerminalSession as focusPortTerminalSession } from "./lib/terminal";
-import { PortProcess, Preferences } from "./types";
+import { PortProcess } from "./types";
+
+type CommandPreferences = Preferences.OpenDevPorts;
 
 export default function Command() {
-  const preferences = getPreferenceValues<Preferences>();
+  const preferences = getPreferenceValues<CommandPreferences>();
   const [showAllPorts, setShowAllPorts] = useState(Boolean(preferences.showAllPortsByDefault));
   const [showDetails, setShowDetails] = useState(true);
   const { data: ports = [], error, isLoading, revalidate } = usePromise(discoverPorts, [preferences.defaultHost]);
@@ -45,13 +47,17 @@ export default function Command() {
     return () => clearInterval(interval);
   }, [revalidate]);
 
-  if (error) {
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
     showToast({
       style: Toast.Style.Failure,
       title: "Could not load listening ports",
       message: error.message,
     });
-  }
+  }, [error]);
 
   return (
     <List
@@ -104,7 +110,7 @@ function PortListItem({
   onRefresh,
 }: {
   port: PortProcess;
-  preferences: Preferences;
+  preferences: CommandPreferences;
   devPorts: PortProcess[];
   showAllPorts: boolean;
   showDetails: boolean;
@@ -163,7 +169,7 @@ function PortActions({
   onRefresh,
 }: {
   port: PortProcess;
-  preferences: Preferences;
+  preferences: CommandPreferences;
   devPorts: PortProcess[];
   showAllPorts: boolean;
   showDetails: boolean;
@@ -342,7 +348,7 @@ function formatDirectory(directory?: string): string | undefined {
   return `${parts[0]}/${parts[1]}/.../${parts[parts.length - 1]}`;
 }
 
-async function openPortUrl(port: PortProcess, preferences: Preferences) {
+async function openPortUrl(port: PortProcess, preferences: CommandPreferences) {
   await open(port.url);
 
   if (preferences.closeAfterOpening) {
@@ -350,7 +356,7 @@ async function openPortUrl(port: PortProcess, preferences: Preferences) {
   }
 }
 
-async function focusTerminalForPort(port: PortProcess, preferences: Preferences) {
+async function focusTerminalForPort(port: PortProcess, preferences: CommandPreferences) {
   try {
     const title = await focusPortTerminalSession(port, preferences.preferredTerminal);
     await showToast({
@@ -367,7 +373,7 @@ async function focusTerminalForPort(port: PortProcess, preferences: Preferences)
   }
 }
 
-function getOpenProjectTitle(preferences: Preferences): string {
+function getOpenProjectTitle(preferences: CommandPreferences): string {
   const preferredIDE = getPreferredIDE(preferences.preferredIDE);
 
   return preferredIDE ? `Open Project in ${preferredIDE.title}` : "Open Project";
@@ -381,6 +387,7 @@ async function killPortProcess(
 ) {
   const runKill = async () => {
     try {
+      await assertProcessStillMatches(port);
       await killProcess(port.pid, signal);
       await showToast({
         style: Toast.Style.Success,
@@ -429,6 +436,7 @@ async function killAllDevPorts(devPorts: PortProcess[], shouldConfirm: boolean, 
 
     for (const port of processes) {
       try {
+        await assertProcessStillMatches(port);
         await killProcess(port.pid, "SIGTERM");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -466,6 +474,25 @@ async function killAllDevPorts(devPorts: PortProcess[], shouldConfirm: boolean, 
       onAction: runKillAll,
     },
   });
+}
+
+async function assertProcessStillMatches(port: PortProcess): Promise<void> {
+  const [statsByPid, cwdByPid] = await Promise.all([getProcessStats([port.pid]), getProcessCwds([port.pid])]);
+  const stats = statsByPid.get(port.pid);
+
+  if (!stats) {
+    throw new Error("Process is no longer running.");
+  }
+
+  if (port.command && stats.command !== port.command) {
+    throw new Error("Process changed since the list was refreshed. Refresh and try again.");
+  }
+
+  const cwd = cwdByPid.get(port.pid);
+
+  if (port.cwd && cwd && cwd !== port.cwd) {
+    throw new Error("Process changed directory since the list was refreshed. Refresh and try again.");
+  }
 }
 
 function getUniqueProcesses(ports: PortProcess[]): PortProcess[] {
