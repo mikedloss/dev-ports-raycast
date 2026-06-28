@@ -112,6 +112,10 @@ function PortListItem({
   onToggleDetails: () => void;
   onRefresh: () => void;
 }) {
+  const accessories = isLocalOnlyAddress(port.boundAddress)
+    ? []
+    : [{ tag: { value: "LAN", color: Color.SecondaryText } }];
+
   return (
     <List.Item
       icon={port.isDevServer ? Icon.Terminal : Icon.Network}
@@ -126,11 +130,7 @@ function PortListItem({
         port.boundAddress,
         port.url,
       ]}
-      accessories={[
-        port.isDevServer
-          ? { tag: { value: "App", color: Color.Green } }
-          : { tag: { value: "Port", color: Color.SecondaryText } },
-      ]}
+      accessories={accessories}
       detail={<PortDetail port={port} />}
       actions={
         <PortActions
@@ -146,6 +146,10 @@ function PortListItem({
       }
     />
   );
+}
+
+function isLocalOnlyAddress(boundAddress: string): boolean {
+  return ["127.0.0.1", "::1", "[::1]", "localhost"].includes(boundAddress);
 }
 
 function PortActions({
