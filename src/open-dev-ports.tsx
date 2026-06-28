@@ -16,6 +16,7 @@ import {
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
+import path from "node:path";
 
 import { formatBytes, formatPercent, truncateCommand } from "./lib/format";
 import { killProcess } from "./lib/processes";
@@ -114,8 +115,8 @@ function PortListItem({
   return (
     <List.Item
       icon={port.isDevServer ? Icon.Terminal : Icon.Network}
-      title={port.displayName}
-      subtitle={port.command ?? port.processName}
+      title={`${port.displayName} :${port.port}`}
+      subtitle={getPortSubtitle(port)}
       keywords={[
         String(port.port),
         String(port.pid),
@@ -126,10 +127,9 @@ function PortListItem({
         port.url,
       ]}
       accessories={[
-        { text: `:${port.port}` },
         port.isDevServer
-          ? { tag: { value: "Dev", color: Color.Green } }
-          : { tag: { value: "All", color: Color.SecondaryText } },
+          ? { tag: { value: "Server", color: Color.Green } }
+          : { tag: { value: "Port", color: Color.SecondaryText } },
       ]}
       detail={<PortDetail port={port} />}
       actions={
@@ -261,11 +261,13 @@ function PortActions({
 function PortDetail({ port }: { port: PortProcess }) {
   const command = truncateCommand(port.command);
   const markdown = [
-    `# ${port.displayName}`,
+    `# ${port.displayName} :${port.port}`,
     "",
     `\`${port.url}\``,
     "",
-    command ? `\`\`\`sh\n${command}\n\`\`\`` : undefined,
+    port.cwd ? `**Directory**\n\n\`${port.cwd}\`` : undefined,
+    "",
+    command ? `**Command**\n\n\`\`\`sh\n${command}\n\`\`\`` : undefined,
   ]
     .filter(Boolean)
     .join("\n");
@@ -305,6 +307,32 @@ function PortDetail({ port }: { port: PortProcess }) {
       }
     />
   );
+}
+
+function getPortSubtitle(port: PortProcess): string {
+  const directory = formatDirectory(port.cwd);
+
+  if (directory) {
+    return `${port.processName} · ${directory}`;
+  }
+
+  return port.processName;
+}
+
+function formatDirectory(directory?: string): string | undefined {
+  if (!directory) {
+    return undefined;
+  }
+
+  const home = process.env.HOME;
+  const normalized = home && directory.startsWith(home) ? `~${directory.slice(home.length)}` : directory;
+  const parts = normalized.split(path.sep).filter(Boolean);
+
+  if (parts.length <= 3) {
+    return normalized;
+  }
+
+  return `${parts[0]}/${parts[1]}/.../${parts[parts.length - 1]}`;
 }
 
 async function openPortUrl(port: PortProcess, preferences: Preferences) {
