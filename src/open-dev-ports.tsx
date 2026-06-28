@@ -211,6 +211,9 @@ function PortActions({
       <ActionPanel.Section title="Copy">
         <Action.CopyToClipboard title="Copy Port" content={String(port.port)} />
         <Action.CopyToClipboard title="Copy PID" content={String(port.pid)} />
+        {port.lanUrls.length > 0 ? (
+          <Action.CopyToClipboard title="Copy LAN URLs" content={port.lanUrls.join("\n")} />
+        ) : null}
         {port.command ? <Action.CopyToClipboard title="Copy Command" content={port.command} /> : null}
         {port.cwd ? <Action.CopyToClipboard title="Copy Directory" content={port.cwd} /> : null}
       </ActionPanel.Section>
@@ -264,17 +267,14 @@ function PortActions({
 
 function PortDetail({ port }: { port: PortProcess }) {
   const command = truncateCommand(port.command);
-  const markdown = [
+  const markdownSections = [
     `# ${port.displayName} :${port.port}`,
-    "",
     `\`${port.url}\``,
-    "",
     port.cwd ? `**Directory**\n\n\`${port.cwd}\`` : undefined,
-    "",
+    port.lanUrls.length > 0 ? `**LAN URLs**\n\n${port.lanUrls.map((url) => `- \`${url}\``).join("\n")}` : undefined,
     command ? `**Command**\n\n\`\`\`sh\n${command}\n\`\`\`` : undefined,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].filter((section): section is string => Boolean(section));
+  const markdown = markdownSections.join("\n\n");
 
   return (
     <List.Item.Detail
@@ -286,6 +286,9 @@ function PortDetail({ port }: { port: PortProcess }) {
           <List.Item.Detail.Metadata.Label title="Process" text={port.processName} />
           <List.Item.Detail.Metadata.Label title="Bound Address" text={port.boundAddress} />
           <List.Item.Detail.Metadata.Label title="URL" text={port.url} />
+          {port.lanUrls.map((url, index) => (
+            <List.Item.Detail.Metadata.Label key={url} title={index === 0 ? "LAN URL" : "LAN URL "} text={url} />
+          ))}
           {port.user ? <List.Item.Detail.Metadata.Label title="User" text={port.user} /> : null}
           {port.tty ? <List.Item.Detail.Metadata.Label title="TTY" text={port.tty} /> : null}
           {port.cwd ? <List.Item.Detail.Metadata.Label title="Directory" text={port.cwd} /> : null}

@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -63,6 +64,7 @@ type LsofEntry = {
 export async function discoverPorts(defaultHost: DefaultHostPreference): Promise<PortProcess[]> {
   const entries = await getListeningPorts();
   const pids = entries.map((entry) => entry.pid);
+  const lanHosts = getLanHosts();
   const [statsByPid, cwdByPid, ancestorsByPid] = await Promise.all([
     getProcessStats(pids),
     getProcessCwds(pids),
@@ -78,6 +80,7 @@ export async function discoverPorts(defaultHost: DefaultHostPreference): Promise
       const devReasons = await getDevReasons(entry.processName, command, cwd);
       const displayName = getDisplayName(entry.processName, cwd);
       const url = await buildLocalUrl(entry.boundAddress, entry.port, defaultHost);
+      const lanUrls = await buildLanUrls(entry.boundAddress, entry.port, lanHosts);
 
       return {
         id: `${entry.pid}:${entry.boundAddress}:${entry.port}`,
@@ -86,6 +89,7 @@ export async function discoverPorts(defaultHost: DefaultHostPreference): Promise
         protocol: "tcp" as const,
         boundAddress: entry.boundAddress,
         url,
+        lanUrls,
         processName: entry.processName,
         displayName,
         command,
@@ -233,6 +237,33 @@ async function buildLocalUrl(boundAddress: string, port: number, defaultHost: De
   const scheme = await detectUrlScheme(host, port);
 
   return `${scheme}://${host}:${port}`;
+}
+
+async function buildLanUrls(boundAddress: string, port: number, lanHosts: string[]): Promise<string[]> {
+  if (isLocalOnlyAddress(boundAddress) || lanHosts.length === 0) {
+    return [];
+  }
+
+  const scheme = await detectUrlScheme("localhost", port);
+  return lanHosts.map((host) => `${scheme}://${host}:${port}`);
+}
+
+function getLanHosts(): string[] {
+  const addresses = new Set<string>();
+
+  for (const networkAddresses of Object.values(os.networkInterfaces())) {
+    for (const address of networkAddresses ?? []) {
+      if (address.family === "IPv4" && !address.internal) {
+        addresses.add(address.address);
+      }
+    }
+  }
+
+  return Array.from(addresses).sort();
+}
+
+function isLocalOnlyAddress(boundAddress: string): boolean {
+  return ["127.0.0.1", "::1", "[::1]", "localhost"].includes(boundAddress);
 }
 
 function getUrlHost(boundAddress: string, defaultHost: DefaultHostPreference): string {
