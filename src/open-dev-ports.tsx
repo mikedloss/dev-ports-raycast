@@ -128,7 +128,7 @@ function PortListItem({
       ]}
       accessories={[
         port.isDevServer
-          ? { tag: { value: "Server", color: Color.Green } }
+          ? { tag: { value: "App", color: Color.Green } }
           : { tag: { value: "Port", color: Color.SecondaryText } },
       ]}
       detail={<PortDetail port={port} />}
